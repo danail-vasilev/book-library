@@ -7,7 +7,7 @@ contract BookLibrary is Ownable {
     struct Book {
         string title;
         uint copies;
-        address[] bookBorrowedAddresses; // TODO: Change to addresses that have ever borrowed a book
+        address[] bookBorrowedAddresses;
     }
 
     // It's more cheaper to make a state variable public rather than creating a getter function
@@ -20,6 +20,11 @@ contract BookLibrary is Ownable {
     // Use nested mapping to avoid loops.
     // bytes32 is more gas efficient than uint256 for storing book ids
     mapping(address => mapping(bytes32 => bool)) private userToBorrowedBooks;
+
+    // TODO: Should we keep it here or inside Book struct
+    // A helper mapping used to keep Book.bookBorrowedAddresses unique
+    mapping(address => mapping(bytes32 => bool))
+        private userToBorrowedBooksHistory;
 
     event BookAdded(
         string title,
@@ -66,12 +71,18 @@ contract BookLibrary is Ownable {
         mapping(bytes32 => bool) storage borrowedBooks = userToBorrowedBooks[
             msg.sender
         ];
-        require(!borrowedBooks[bookId], "You have already borrowed this book!");
+        require(!borrowedBooks[bookId], "You have already borrowed this book");
 
+        // Decrease copies of the book
         books[bookId].copies -= 1;
-        books[bookId].bookBorrowedAddresses.push(msg.sender);
-
+        // Mark book as borrowed in the user's data entry
         borrowedBooks[bookId] = true;
+
+        // User borrows book for the first time - include borrower to the book history list
+        if (!userToBorrowedBooksHistory[msg.sender][bookId]) {
+            userToBorrowedBooksHistory[msg.sender][bookId] = true;
+            books[bookId].bookBorrowedAddresses.push(msg.sender);
+        }
         emit BookBorrowed(_title, msg.sender, books[bookId].copies);
     }
 
@@ -94,21 +105,6 @@ contract BookLibrary is Ownable {
 
         // Remove the book from the borrower
         userToBorrowedBooks[msg.sender][bookId] = false;
-
-        address[] storage bookBorrowedAddresses = books[bookId]
-            .bookBorrowedAddresses;
-
-        // Unordered array deletion
-        // TODO: Make bookBorrowedAddresses historical and remove that
-        uint idxToDelete;
-        for (uint i = 0; i < bookBorrowedAddresses.length; i++) {
-            if (bookBorrowedAddresses[i] == msg.sender) {
-                idxToDelete = i;
-                break;
-            }
-        }
-        delete bookBorrowedAddresses[idxToDelete];
-        bookBorrowedAddresses.pop();
         emit BookReturned(_title, msg.sender, books[bookId].copies);
     }
 
