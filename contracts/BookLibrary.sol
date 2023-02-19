@@ -6,7 +6,8 @@ contract BookLibrary is Ownable {
     using StringUtil for string;
     struct Book {
         string title;
-        uint copies;
+        uint allCopies;
+        uint currentCopies;
         address[] bookBorrowedAddresses;
     }
 
@@ -51,8 +52,9 @@ contract BookLibrary is Ownable {
             bookKey.push(bookId);
         }
         // Update copies of the book. If book is initially added copies defaults to 0.
-        book.copies += _copies;
-        emit BookAdded(_title, msg.sender, _copies, book.copies);
+        book.allCopies += _copies;
+        book.currentCopies += _copies;
+        emit BookAdded(_title, msg.sender, _copies, book.allCopies);
     }
 
     // Modifiers for valid title and book existence can be added
@@ -74,7 +76,7 @@ contract BookLibrary is Ownable {
         require(!borrowedBooks[bookId], "You have already borrowed this book");
 
         // Decrease copies of the book
-        books[bookId].copies -= 1;
+        books[bookId].currentCopies -= 1;
         // Mark book as borrowed in the user's data entry
         borrowedBooks[bookId] = true;
 
@@ -83,16 +85,19 @@ contract BookLibrary is Ownable {
             userToBorrowedBooksHistory[msg.sender][bookId] = true;
             books[bookId].bookBorrowedAddresses.push(msg.sender);
         }
-        emit BookBorrowed(_title, msg.sender, books[bookId].copies);
+        emit BookBorrowed(_title, msg.sender, books[bookId].currentCopies);
     }
 
-    modifier availableBook(string memory _title) {
-        bytes32 id = _title.toBytes32();
+    modifier availableBook(string calldata _title) {
         require(
-            books[id].copies > 0,
+            isAvailable(_title),
             "There are no available books at the moment"
         );
         _;
+    }
+
+    function isAvailable(string calldata _title) public view returns (bool) {
+        return books[_title.toBytes32()].currentCopies > 0;
     }
 
     function returnBook(
@@ -101,11 +106,11 @@ contract BookLibrary is Ownable {
         bytes32 bookId = _title.toBytes32();
 
         // Add back the book to the lib
-        books[bookId].copies += 1;
+        books[bookId].currentCopies += 1;
 
         // Remove the book from the borrower
         userToBorrowedBooks[msg.sender][bookId] = false;
-        emit BookReturned(_title, msg.sender, books[bookId].copies);
+        emit BookReturned(_title, msg.sender, books[bookId].currentCopies);
     }
 
     // TODO: Best practice for params data location in modifiers ?
@@ -116,12 +121,35 @@ contract BookLibrary is Ownable {
         _;
     }
 
-    modifier borrowedBook(string memory _title) {
-        require(
-            userToBorrowedBooks[msg.sender][_title.toBytes32()],
-            "You haven't borrowed this book"
-        );
+    modifier borrowedBook(string calldata _title) {
+        require(isBorrowed(_title), "You haven't borrowed this book");
         _;
+    }
+
+    function isBorrowed(string calldata _title) public view returns (bool) {
+        return userToBorrowedBooks[msg.sender][_title.toBytes32()];
+    }
+
+    function getAvailableBooks() external view returns (string[] memory) {
+        string[] memory availableBooks = new string[](bookKey.length);
+        for (uint256 i = 0; i < bookKey.length; i++) {
+            Book memory currBook = books[bookKey[i]];
+            availableBooks[i] = string(
+                abi.encodePacked(
+                    currBook.title,
+                    currBook.currentCopies > 0
+                        ? " is available"
+                        : " is not available"
+                )
+            );
+        }
+        return availableBooks;
+    }
+
+    function getBookInfo(
+        string calldata _title
+    ) external view returns (Book memory) {
+        return books[_title.toBytes32()];
     }
 }
 

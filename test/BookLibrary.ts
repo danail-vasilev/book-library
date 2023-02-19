@@ -38,15 +38,19 @@ describe("BookLibrary", function () {
     expect(await bookLibrary.bookKey(0)).to.be.equal(bookId1);
     // TODO: Can we insert type from contact ?
     const book: any = await bookLibrary.books(bookId1);
-    expect(book.copies).to.be.equal(bookCopiesInit);
+    expect(book.currentCopies).to.be.equal(bookCopiesInit);
+    expect(book.allCopies).to.be.equal(bookCopiesInit);
     expect(book.title).to.be.equal(bookTitle1);
     // Test arrays via getter func
     const borrowers = await bookLibrary.listBookBorrowers(bookTitle1);
     expect(borrowers.length).to.be.equal(0);
     const addBookTx2 = await bookLibrary.addBook(bookTitle1, 5);
     await addBookTx2.wait();
-    expect((await bookLibrary.books(bookId1)).copies).to.be.equal(
+    expect((await bookLibrary.books(bookId1)).currentCopies).to.be.equal(
       bookCopiesAdded
+    );
+    expect((await bookLibrary.books(bookId1)).allCopies).to.be.equal(
+      bookCopiesInit + 5
     );
   });
 
@@ -70,7 +74,8 @@ describe("BookLibrary", function () {
     const returnBookTx = await bookLibrary.returnBook(bookTitle1);
     await returnBookTx.wait();
     const book: any = await bookLibrary.books(bookId1);
-    expect(book.copies).to.be.equal(bookCopiesAdded);
+    expect(book.currentCopies).to.be.equal(bookCopiesAdded);
+    // Assert all copies to not be changed
     expect(book.title).to.be.equal(bookTitle1);
     const borrowers = await bookLibrary.listBookBorrowers(bookTitle1);
     const [owner, addr1] = await ethers.getSigners();
@@ -97,7 +102,8 @@ describe("BookLibrary", function () {
     const borrowBookTx = await bookLibrary.borrowBook(bookTitle1);
     await borrowBookTx.wait();
     const book: any = await bookLibrary.books(bookId1);
-    expect(book.copies).to.be.equal(bookCopiesDecreased);
+    expect(book.currentCopies).to.be.equal(bookCopiesDecreased);
+    // Assert all copies as well to not be changed;
     expect(book.title).to.be.equal(bookTitle1);
     const borrowers = await bookLibrary.listBookBorrowers(bookTitle1);
     const [owner, addr1] = await ethers.getSigners();
@@ -105,4 +111,9 @@ describe("BookLibrary", function () {
     expect(borrowers[0]).to.be.equal(ownerAddress);
     expect(borrowers.length).to.be.equal(1);
   }
+  it("Should check available books", async function () {
+    const availableBookTitles = await bookLibrary.getAvailableBooks();
+    expect(availableBookTitles.length).to.be.equal(1);
+    expect(availableBookTitles[0]).to.be.equal(bookTitle1 + " is available");
+  });
 });

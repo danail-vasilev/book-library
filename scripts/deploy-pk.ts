@@ -1,6 +1,9 @@
 import { ethers } from "hardhat";
 
-export async function main(_privateKey, _rpcUrl) {
+export async function main(_privateKey: string, _rpcUrl: string) {
+  console.log(_privateKey);
+  console.log(_rpcUrl);
+
   const provider = new ethers.providers.JsonRpcProvider(_rpcUrl);
   const wallet = new ethers.Wallet(_privateKey, provider);
   // console.log(
