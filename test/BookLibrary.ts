@@ -36,8 +36,8 @@ describe("BookLibrary", function () {
     const addBookTx = await bookLibrary.addBook(bookTitle1, bookCopiesInit);
     await addBookTx.wait();
     expect(await bookLibrary.bookKey(0)).to.be.equal(bookId1);
-    // TODO: Can we insert type from contact ?
-    const book: any = await bookLibrary.books(bookId1);
+
+    const book = await bookLibrary.books(bookId1);
     expect(book.currentCopies).to.be.equal(bookCopiesInit);
     expect(book.allCopies).to.be.equal(bookCopiesInit);
     expect(book.title).to.be.equal(bookTitle1);
@@ -82,7 +82,7 @@ describe("BookLibrary", function () {
     const ownerAddress = await owner.getAddress();
     expect(borrowers[0]).to.be.equal(ownerAddress);
     expect(borrowers.length).to.be.equal(1);
-    // TODO: Should me test Events ?
+    // Events must be tested as well. Here, however, we only use events for logging.
   });
 
   it("Should throw when try to return a non-borrowed book, book with no title", async function () {
@@ -112,8 +112,14 @@ describe("BookLibrary", function () {
     expect(borrowers.length).to.be.equal(1);
   }
   it("Should check available books", async function () {
+    const bookTitle2 = "some book title2";
+    await (await bookLibrary.addBook(bookTitle2, 1)).wait();
+    await (await bookLibrary.borrowBook(bookTitle2)).wait();
     const availableBookTitles = await bookLibrary.getAvailableBooks();
-    expect(availableBookTitles.length).to.be.equal(1);
+    expect(availableBookTitles.length).to.be.equal(2);
     expect(availableBookTitles[0]).to.be.equal(bookTitle1 + " is available");
+    expect(availableBookTitles[1]).to.be.equal(
+      bookTitle2 + " is not available"
+    );
   });
 });

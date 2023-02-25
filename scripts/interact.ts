@@ -1,34 +1,30 @@
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import BookLibrary from "../artifacts/contracts/BookLibrary.sol/BookLibrary.json";
 import "dotenv/config";
+import { Contract } from "ethers";
 
-const INFURA_RPC_URL = process.env.INFURA_RPC_URL;
-const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
-const PRIVATE_KEY = process.env.PRIVATE_KEY;
-const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
 const GOERLI_BOOKLIB_CONTRACT = process.env.GOERLI_BOOKLIB_CONTRACT;
-
-const LOCAL_HOST_URL = process.env.LOCAL_HOST_URL;
-const LOCAL_HOST_ACC = process.env.LOCAL_HOST_ACC;
-const LOCAL_HOST_PRIVATE_KEY = process.env.LOCAL_HOST_PRIVATE_KEY;
 const LOCAL_HOST_BOOKLIB_CONTRACT = process.env.LOCAL_HOST_BOOKLIB_CONTRACT;
 
-export async function main(isLocalHost: string) {
+const LOCAL_HOST_URL = process.env.LOCAL_HOST_URL;
+const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
+
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const LOCAL_HOST_PRIVATE_KEY = process.env.LOCAL_HOST_PRIVATE_KEY;
+
+export async function mainParams(isLocalHost: string) {
   // Use this var because isLocalHost is of string
   const isLocal = isLocalHost === "true";
+
   // Determine the contract's address and ABI
   const contractAddress: string = (
     isLocal ? LOCAL_HOST_BOOKLIB_CONTRACT : GOERLI_BOOKLIB_CONTRACT
   ) as string;
-  const contractAbi = BookLibrary.abi;
 
   // Connect to a node
   const RPC_URL = isLocal ? LOCAL_HOST_URL : GOERLI_RPC_URL;
   const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-  console.log(LOCAL_HOST_URL);
-  console.log(GOERLI_RPC_URL);
-  console.log(isLocalHost);
-  console.log(RPC_URL);
+
   await doesContractExist(provider, contractAddress);
 
   // Instantiate the contract
@@ -39,13 +35,55 @@ export async function main(isLocalHost: string) {
   // 1) Reference contract with provider:
   // const bookLibrary = new ethers.Contract(contractAddress, contractAbi, provider);
   // 2) Reference contract with wallet:
+  const contractAbi = BookLibrary.abi;
   const bookLibrary = new ethers.Contract(contractAddress, contractAbi, wallet);
+  await contractInteraction(bookLibrary);
+}
+
+// Define local network settings in order to interact with an already deployed contract on local node because
+// default hardhat run-time server is different than running a hardhat node
+export async function mainHardhatConfig() {
+  const [owner] = await ethers.getSigners();
+  // Use provider from hardhat config
+  // Both are the same
+  const provider = owner.provider;
+  //let provider = ethers.provider;
+
+  // Contract is already deployed to corresponding network. Based on the network use related contract address.
+  const contractAddress: string = getContractAddressFromChainId() as string;
+
+  const contractAbi = BookLibrary.abi;
+
+  await doesContractExist(provider, contractAddress);
+  console.log("contract address:", contractAddress);
+
+  // const wallet = new ethers.Wallet(privateKey, provider);
+  // 1) Reference contract with provider:
+  // const bookLibrary = new ethers.Contract(contractAddress, contractAbi, provider);
+  // 2) Reference contract with wallet:
+
+  const bookLibrary = new ethers.Contract(contractAddress, contractAbi, owner);
+  await contractInteraction(bookLibrary);
+}
+
+function getContractAddressFromChainId() {
+  const chainId = network.config.chainId;
+  console.log(chainId);
+  if (chainId == 31337) {
+    // hardhat local network
+    return LOCAL_HOST_BOOKLIB_CONTRACT;
+  } else if (chainId == 5) {
+    // goerli network
+    return GOERLI_BOOKLIB_CONTRACT as string;
+  } else {
+    console.warn("No contracts");
+    return;
+  }
+}
+
+async function contractInteraction(bookLibrary: Contract) {
   const bookKey1 = await bookLibrary.listBookBorrowers("non-existing-title");
   console.log(bookKey1);
-
-  // const bookLibraryFactory = await ethers.getContractFactory("BookLibrary");
-  // const bookLibrary = await bookLibraryFactory.deploy();
-  // await bookLibrary.deployed();
 
   console.log(`Book library deployed to ${bookLibrary.address}`);
   const title1: string = "Title1";

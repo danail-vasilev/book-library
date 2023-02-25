@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./StringUtil.sol";
 
 contract BookLibrary is Ownable {
     using StringUtil for string;
@@ -35,6 +36,29 @@ contract BookLibrary is Ownable {
     );
     event BookBorrowed(string title, address borrower, uint256 leftCopies);
     event BookReturned(string title, address borrower, uint256 leftCopies);
+
+    // It's more gas efficient to declare modifier's logic outside a function because
+    // modifier's code is copied in each function
+    modifier availableBook(string calldata _title) {
+        require(
+            isAvailable(_title),
+            "There are no available books at the moment"
+        );
+        _;
+    }
+
+    // TODO: Best practice for params data location in modifiers ?
+    //  * both calldata and memory compiles, no gas change
+    //  * Probably memory because modifiers are internal
+    modifier validTitle(string memory _title) {
+        require(!_title.isEmpty(), "Book title is not valid");
+        _;
+    }
+
+    modifier borrowedBook(string calldata _title) {
+        require(isBorrowed(_title), "You haven't borrowed this book");
+        _;
+    }
 
     function addBook(
         string calldata _title,
@@ -88,18 +112,6 @@ contract BookLibrary is Ownable {
         emit BookBorrowed(_title, msg.sender, books[bookId].currentCopies);
     }
 
-    modifier availableBook(string calldata _title) {
-        require(
-            isAvailable(_title),
-            "There are no available books at the moment"
-        );
-        _;
-    }
-
-    function isAvailable(string calldata _title) public view returns (bool) {
-        return books[_title.toBytes32()].currentCopies > 0;
-    }
-
     function returnBook(
         string calldata _title
     ) external validTitle(_title) borrowedBook(_title) {
@@ -113,34 +125,16 @@ contract BookLibrary is Ownable {
         emit BookReturned(_title, msg.sender, books[bookId].currentCopies);
     }
 
-    // TODO: Best practice for params data location in modifiers ?
-    //  * both calldata and memory compiles, no gas change
-    //  * Probably memory because modifiers are internal
-    modifier validTitle(string memory _title) {
-        require(!_title.isEmpty(), "Book title is not valid");
-        _;
-    }
-
-    modifier borrowedBook(string calldata _title) {
-        require(isBorrowed(_title), "You haven't borrowed this book");
-        _;
-    }
-
-    function isBorrowed(string calldata _title) public view returns (bool) {
-        return userToBorrowedBooks[msg.sender][_title.toBytes32()];
-    }
-
+    // It's fine to use arrays for reading / simpler operations
     function getAvailableBooks() external view returns (string[] memory) {
         string[] memory availableBooks = new string[](bookKey.length);
         for (uint256 i = 0; i < bookKey.length; i++) {
             Book memory currBook = books[bookKey[i]];
+            string memory availableText = currBook.currentCopies > 0
+                ? " is available"
+                : " is not available";
             availableBooks[i] = string(
-                abi.encodePacked(
-                    currBook.title,
-                    currBook.currentCopies > 0
-                        ? " is available"
-                        : " is not available"
-                )
+                abi.encodePacked(currBook.title, availableText)
             );
         }
         return availableBooks;
@@ -148,18 +142,15 @@ contract BookLibrary is Ownable {
 
     function getBookInfo(
         string calldata _title
-    ) external view returns (Book memory) {
+    ) public view returns (Book memory) {
         return books[_title.toBytes32()];
     }
-}
 
-library StringUtil {
-    // Compiles also with calldata + public/external; No change is gas
-    function toBytes32(string memory _str) internal pure returns (bytes32) {
-        return bytes32(bytes(_str));
+    function isAvailable(string calldata _title) public view returns (bool) {
+        return getBookInfo(_title).currentCopies > 0;
     }
 
-    function isEmpty(string memory _str) internal pure returns (bool) {
-        return bytes(_str).length == 0;
+    function isBorrowed(string calldata _title) public view returns (bool) {
+        return userToBorrowedBooks[msg.sender][_title.toBytes32()];
     }
 }
