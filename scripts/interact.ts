@@ -4,10 +4,15 @@ import "dotenv/config";
 import { Contract } from "ethers";
 
 const GOERLI_BOOKLIB_CONTRACT = process.env.GOERLI_BOOKLIB_CONTRACT;
+const SEPOLIA_BOOKLIB_CONTRACT = process.env.SEPOLIA_BOOKLIB_CONTRACT;
 const LOCAL_HOST_BOOKLIB_CONTRACT = process.env.LOCAL_HOST_BOOKLIB_CONTRACT;
 
 const LOCAL_HOST_URL = process.env.LOCAL_HOST_URL;
 const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
+
+const GOERLI_CHAIN_ID = process.env.GOERLI_CHAIN_ID;
+const SEPOLIA_CHAIN_ID = process.env.SEPOLIA_CHAIN_ID;
+const LOCAL_HOST_CHAIN_ID = process.env.LOCAL_HOST_CHAIN_ID;
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const LOCAL_HOST_PRIVATE_KEY = process.env.LOCAL_HOST_PRIVATE_KEY;
@@ -69,12 +74,14 @@ export async function mainHardhatConfig() {
 function getContractAddressFromChainId() {
   const chainId = network.config.chainId;
   console.log(chainId);
-  if (chainId == 31337) {
+  if (chainId == LOCAL_HOST_CHAIN_ID) {
     // hardhat local network
     return LOCAL_HOST_BOOKLIB_CONTRACT;
-  } else if (chainId == 5) {
+  } else if (chainId == GOERLI_CHAIN_ID) {
     // goerli network
     return GOERLI_BOOKLIB_CONTRACT as string;
+  } else if (chainId == SEPOLIA_CHAIN_ID) {
+    return SEPOLIA_BOOKLIB_CONTRACT as string;
   } else {
     console.warn("No contracts");
     return;

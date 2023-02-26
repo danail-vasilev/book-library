@@ -4,9 +4,15 @@ import "dotenv/config";
 import "@nomiclabs/hardhat-etherscan";
 
 const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
+const GOERLI_CHAIN_ID = process.env.GOERLI_CHAIN_ID as unknown as number;
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
+const SEPOLIA_RPC_URL = process.env.SEPOLIA_RPC_URL;
+const SEPOLIA_CHAIN_ID = process.env.SEPOLIA_CHAIN_ID as unknown as number;
+
 const LOCAL_HOST_URL = process.env.LOCAL_HOST_URL;
+const LOCAL_HOST_CHAIN_ID = process.env
+  .LOCAL_HOST_CHAIN_ID as unknown as number;
 const LOCAL_HOST_PRIVATE_KEY = process.env.LOCAL_HOST_PRIVATE_KEY;
 
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
@@ -66,7 +72,6 @@ subtask("print", "Prints a message")
     console.log(taskArgs.message);
   });
 
-// TODO: Use sepolia as goerli is deprecated
 const config: HardhatUserConfig = {
   solidity: {
     version: "0.8.17",
@@ -83,6 +88,11 @@ const config: HardhatUserConfig = {
       url: GOERLI_RPC_URL,
       accounts: [PRIVATE_KEY!],
       chainId: 5,
+    },
+    sepolia: {
+      url: SEPOLIA_RPC_URL,
+      accounts: [PRIVATE_KEY!],
+      chainId: 11155111,
     },
     local: {
       url: LOCAL_HOST_URL,

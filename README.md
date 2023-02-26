@@ -34,3 +34,26 @@ for verification on the block explorer. Waiting for verification result...
 
 Successfully verified contract BookLibrary on Etherscan.
 https://goerli.etherscan.io/address/0xaff5e74dBB53A685C219CEDFBD3D28d812742077#code
+
+## Deploy BookLibrary contract to sepolia network and verify it
+
+```shell
+npx hardhat deploy-config --network sepolia
+```
+
+Deploying contracts with the account: 0x9B2378d28cb0E6aD5e58801e65dA7334fB1CC39B
+The Book Library contract is deployed to 0xA8E46754033a8Fa049Fe602418B3B9D4B630fc94
+The Book Library contract owner is 0x9B2378d28cb0E6aD5e58801e65dA7334fB1CC39B
+
+```shell
+npx hardhat verify --network sepolia "0xA8E46754033a8Fa049Fe602418B3B9D4B630fc94"
+```
+
+Nothing to compile
+No need to generate any newer typings.
+Successfully submitted source code for contract
+contracts/BookLibrary.sol:BookLibrary at 0xA8E46754033a8Fa049Fe602418B3B9D4B630fc94
+for verification on the block explorer. Waiting for verification result...
+
+Successfully verified contract BookLibrary on Etherscan.
+https://sepolia.etherscan.io/address/0xA8E46754033a8Fa049Fe602418B3B9D4B630fc94#code
