@@ -99,7 +99,12 @@ contract BookLibrary is Ownable {
     }
 
     function borrowBook(
-        string calldata _title
+        string calldata _title,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
     ) external validTitle(_title) availableBook(_title) {
         bytes32 bookId = _title.toBytes32();
 
@@ -116,17 +121,17 @@ contract BookLibrary is Ownable {
             LIBToken.allowance(msg.sender, address(this)) >= borrowPrice,
             "Token allowance too low"
         );
-        // TODO: Uncomment and test
-        // LIB(LIBToken).permit(
-        //     msg.sender,
-        //     address(this),
-        //     value,
-        //     deadline,
-        //     v,
-        //     r,
-        //     s
-        // );
-        // LIBToken.transferFrom(msg.sender, address(this), borrowPrice);
+
+        LIB(LIBToken).permit(
+            msg.sender,
+            address(this),
+            value,
+            deadline,
+            v,
+            r,
+            s
+        );
+        LIBToken.transferFrom(msg.sender, address(this), borrowPrice);
 
         // Decrease copies of the book
         books[bookId].currentCopies -= 1;

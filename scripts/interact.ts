@@ -149,7 +149,8 @@ async function bookLibInteraction(bookLibrary: Contract) {
   console.log(bookKey);
   console.log(`Available books: ${await bookLibrary.getAvailableBooks()}`);
   console.log(await bookLibrary.books(bookKey));
-  await (await bookLibrary.borrowBook(title2)).wait();
+  // TODO: Fix that by signing tx and passing params here
+  // await (await bookLibrary.borrowBook(title2)).wait();
   console.log(`Is rented: ${await bookLibrary.isBorrowed(title2)}`);
   console.log(`Is available: ${await bookLibrary.isAvailable(title2)}`);
   await (await bookLibrary.returnBook(title2)).wait();
