@@ -27,8 +27,19 @@ export async function mainParams(_privateKey: string, _rpcUrl: string) {
 
 async function deployContract(signer: SignerWithAddress | Wallet) {
   console.log("Deploying contracts with the account:", signer.address); // We are printing the address of the deployer
+  // LIB Token deploy:
+  const LibToken_Factory = await ethers.getContractFactory("LIB");
+  const libToken = await LibToken_Factory.connect(signer).deploy();
+  await libToken.deployed();
+  const libTokenAddress = libToken.address;
+  console.log(`The Lib Token contract is deployed to ${libTokenAddress}`);
+
+  // TODO: Each contract must be placed in a separate file
+  // Booklib deploy:
   const BookLibrary_Factory = await ethers.getContractFactory("BookLibrary");
-  const bookLibrary = await BookLibrary_Factory.connect(signer).deploy();
+  const bookLibrary = await BookLibrary_Factory.connect(signer).deploy(
+    libTokenAddress
+  );
   await bookLibrary.deployed();
   console.log(
     `The Book Library contract is deployed to ${bookLibrary.address}`

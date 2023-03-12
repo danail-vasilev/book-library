@@ -1,10 +1,16 @@
 import { ethers, network } from "hardhat";
 import BookLibrary from "../artifacts/contracts/BookLibrary.sol/BookLibrary.json";
+import LIB from "../artifacts/contracts/LIB.sol/LIB.json";
 import "dotenv/config";
 import { Contract } from "ethers";
 
+const GOERLI_LIBTOKEN_CONTRACT = process.env.GOERLI_LIBTOKEN_CONTRACT;
 const GOERLI_BOOKLIB_CONTRACT = process.env.GOERLI_BOOKLIB_CONTRACT;
+
+const SEPOLIA_LIBTOKEN_CONTRACT = process.env.SEPOLIA_LIBTOKEN_CONTRACT;
 const SEPOLIA_BOOKLIB_CONTRACT = process.env.SEPOLIA_BOOKLIB_CONTRACT;
+
+const LOCAL_HOST_LIBTOKEN_CONTRACT = process.env.LOCAL_HOST_LIBTOKEN_CONTRACT;
 const LOCAL_HOST_BOOKLIB_CONTRACT = process.env.LOCAL_HOST_BOOKLIB_CONTRACT;
 
 const LOCAL_HOST_URL = process.env.LOCAL_HOST_URL;
@@ -42,7 +48,7 @@ export async function mainParams(isLocalHost: string) {
   // 2) Reference contract with wallet:
   const contractAbi = BookLibrary.abi;
   const bookLibrary = new ethers.Contract(contractAddress, contractAbi, wallet);
-  await contractInteraction(bookLibrary);
+  await bookLibInteraction(bookLibrary);
 }
 
 // Define local network settings in order to interact with an already deployed contract on local node because
@@ -54,41 +60,82 @@ export async function mainHardhatConfig() {
   const provider = owner.provider;
   //let provider = ethers.provider;
 
-  // Contract is already deployed to corresponding network. Based on the network use related contract address.
-  const contractAddress: string = getContractAddressFromChainId() as string;
+  // Contracts are already deployed to corresponding network. Based on the network use related contract address.
+  const contractAddresses: string[] = getContractAddressesFromChainId();
+  const libTokenAddress = contractAddresses[0];
+  const bookLibAddress = contractAddresses[1];
 
-  const contractAbi = BookLibrary.abi;
+  const libTokenAbi = LIB.abi;
+  await doesContractExist(provider, libTokenAddress);
+  console.log("lib token contract address:", libTokenAddress);
 
-  await doesContractExist(provider, contractAddress);
-  console.log("contract address:", contractAddress);
+  const bookLibAbi = BookLibrary.abi;
+  await doesContractExist(provider, bookLibAddress);
+  console.log("booklib contract address:", bookLibAddress);
 
   // const wallet = new ethers.Wallet(privateKey, provider);
   // 1) Reference contract with provider:
   // const bookLibrary = new ethers.Contract(contractAddress, contractAbi, provider);
   // 2) Reference contract with wallet:
 
-  const bookLibrary = new ethers.Contract(contractAddress, contractAbi, owner);
-  await contractInteraction(bookLibrary);
+  const libToken = new ethers.Contract(libTokenAddress, libTokenAbi, owner);
+  const bookLibrary = new ethers.Contract(bookLibAddress, bookLibAbi, owner);
+
+  console.log();
+  await libTokenInteraction(libToken, owner.address, bookLibAddress);
+  await bookLibInteraction(bookLibrary);
 }
 
-function getContractAddressFromChainId() {
+function getContractAddressesFromChainId() {
   const chainId = network.config.chainId;
   console.log(chainId);
   if (chainId == LOCAL_HOST_CHAIN_ID) {
     // hardhat local network
-    return LOCAL_HOST_BOOKLIB_CONTRACT;
+    return [LOCAL_HOST_LIBTOKEN_CONTRACT, LOCAL_HOST_BOOKLIB_CONTRACT];
   } else if (chainId == GOERLI_CHAIN_ID) {
     // goerli network
-    return GOERLI_BOOKLIB_CONTRACT as string;
+    return [GOERLI_LIBTOKEN_CONTRACT, GOERLI_BOOKLIB_CONTRACT];
   } else if (chainId == SEPOLIA_CHAIN_ID) {
-    return SEPOLIA_BOOKLIB_CONTRACT as string;
+    return [SEPOLIA_LIBTOKEN_CONTRACT, SEPOLIA_BOOKLIB_CONTRACT];
   } else {
     console.warn("No contracts");
     return;
   }
 }
 
-async function contractInteraction(bookLibrary: Contract) {
+async function libTokenInteraction(
+  libToken: Contract,
+  contractOwnerAddress: string,
+  bookLibAddress: string
+) {
+  await (await libToken.mint(contractOwnerAddress, 12)).wait();
+  await (await libToken.mint(bookLibAddress, 12)).wait();
+  await (await libToken.approve(bookLibAddress, 10)).wait();
+  console.log(`Total supply: ${await libToken.totalSupply()}`);
+  console.log(
+    `Balance of owner: ${await libToken.balanceOf(contractOwnerAddress)}`
+  );
+  console.log(
+    `Balance of booklib: ${await libToken.balanceOf(bookLibAddress)}`
+  );
+  console.log(
+    `Allowence of book lib: ${await libToken.allowance(
+      contractOwnerAddress,
+      bookLibAddress
+    )}`
+  );
+
+  // await (await libToken.transfer(bookLibAddress, 3)).wait();
+  // await (await libToken.burn(3)).wait();
+  // TODO: check why an error is thrown ?
+  // await (await libToken.burnFrom(contractOwnerAddress, 3)).wait();
+  // await (
+  //   await libToken.transferFrom(contractOwnerAddress, bookLibAddress, 3)
+  // ).wait();
+}
+
+async function bookLibInteraction(bookLibrary: Contract) {
+  console.log(await bookLibrary.borrowPrice());
   const bookKey1 = await bookLibrary.listBookBorrowers("non-existing-title");
   console.log(bookKey1);
 

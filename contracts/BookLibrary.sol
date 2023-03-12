@@ -3,6 +3,8 @@ pragma solidity 0.8.17;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./StringUtil.sol";
 
+import "./LIB.sol";
+
 contract BookLibrary is Ownable {
     using StringUtil for string;
     struct Book {
@@ -27,6 +29,13 @@ contract BookLibrary is Ownable {
     // A helper mapping used to keep Book.bookBorrowedAddresses unique
     mapping(address => mapping(bytes32 => bool))
         private userToBorrowedBooksHistory;
+
+    uint256 public borrowPrice = 3; // Amount is in LIB tokens. We use unsigned int here because we compare it with allowence below.
+    LIB public LIBToken;
+
+    constructor(address libTokenAddress) {
+        LIBToken = LIB(libTokenAddress);
+    }
 
     event BookAdded(
         string title,
@@ -98,6 +107,26 @@ contract BookLibrary is Ownable {
             msg.sender
         ];
         require(!borrowedBooks[bookId], "You have already borrowed this book");
+
+        // Here we are checking for allowance. This is really important step!
+        // Please go back and review what are allowances in ERC20 tokens and how you can
+        // approve address to spent tokens!!!
+
+        require(
+            LIBToken.allowance(msg.sender, address(this)) >= borrowPrice,
+            "Token allowance too low"
+        );
+        // TODO: Uncomment and test
+        // LIB(LIBToken).permit(
+        //     msg.sender,
+        //     address(this),
+        //     value,
+        //     deadline,
+        //     v,
+        //     r,
+        //     s
+        // );
+        // LIBToken.transferFrom(msg.sender, address(this), borrowPrice);
 
         // Decrease copies of the book
         books[bookId].currentCopies -= 1;
